@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCG発売カレンダー</title>
+<style>
+  :root {
+    --bg: #0f0f14;
+    --bg2: #16161f;
+    --bg3: #1e1e2a;
+    --border: #2a2a3a;
+    --accent: #7c6aff;
+    --accent2: #ff6ab0;
+    --text: #e8e8f0;
+    --text2: #9898b0;
+    --text3: #5a5a70;
+    --success: #4cd9a0;
+    --warn: #ffb347;
+    --danger: #ff5c7a;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    --font: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+
+  /* HEADER */
+  #header {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap; position: sticky; top: 0; z-index: 100;
+  }
+  #header h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.05em; color: var(--accent); flex: 1; min-width: 100px; }
+  .hdr-btn {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+    padding: 7px 11px; border-radius: var(--radius-sm); cursor: pointer;
+    font-size: 12px; font-family: var(--font); transition: all 0.15s; white-space: nowrap;
+  }
+  .hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hdr-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .hdr-btn.add { background: var(--accent); border-color: var(--accent); color: #fff; font-size: 13px; }
+  .hdr-btn.add:hover { background: #6a58e8; }
+  .hdr-btn-group { display: flex; gap: 3px; }
+
+  /* MAIN */
+  #main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+
+  /* FILTER */
+  #filter-panel {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px; margin-bottom: 14px;
+  }
+  #filter-panel summary { cursor: pointer; font-weight: 600; color: var(--text2); font-size: 13px; user-select: none; }
+  .filter-row { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+  .filter-group { flex: 1; min-width: 160px; }
+  .filter-group h4 { font-size: 12px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .filter-checks { display: flex; flex-wrap: wrap; gap: 5px; }
+  .filter-checks label {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 10px;
+    cursor: pointer; font-size: 12px; color: var(--text2); transition: all 0.15s;
+  }
+  .filter-checks label:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-checks input[type=checkbox] { display: none; }
+  .filter-checks label:has(input:checked) { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* CALENDAR */
+  .cal-header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .cal-header h2 { font-size: 20px; font-weight: 700; min-width: 180px; text-align: center; }
+  .cal-nav {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); width: 36px; height: 36px;
+    border-radius: 50%; cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .cal-nav:hover { border-color: var(--accent); color: var(--accent); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-dow { text-align: center; font-size: 11px; color: var(--text3); padding: 4px 2px; font-weight: 600; letter-spacing: 0.05em; }
+  .cal-dow:first-child { color: #ff7070; }
+  .cal-dow:last-child { color: #70aaff; }
+  .cal-cell {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); min-height: 90px;
+    padding: 4px; cursor: pointer; transition: border-color 0.15s; overflow: hidden;
+  }
+  .cal-cell:hover { border-color: var(--accent); }
+  .cal-cell.today { border-color: var(--accent); }
+  .cal-cell.other-month { opacity: 0.35; }
+  .cal-cell.sun .cal-date-num { color: #ff7070; }
+  .cal-cell.sat .cal-date-num { color: #70aaff; }
+  .cal-date { font-size: 11px; font-weight: 700; margin-bottom: 3px; padding: 1px 3px; }
+  .cal-date-num { display: inline-block; }
+  .today-badge {
+    background: var(--accent); color: #fff; border-radius: 50%;
+    width: 20px; height: 20px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 11px;
+  }
+  .cal-item {
+    border-radius: 3px; padding: 2px 4px; margin-bottom: 2px;
+    font-size: 10px; line-height: 1.3; cursor: pointer;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    color: #fff; transition: opacity 0.15s;
+  }
+  .cal-item:hover { opacity: 0.8; }
+  .cal-more { font-size: 10px; color: var(--text3); padding: 1px 2px; }
+
+  /* MONTH SUMMARY */
+  #month-summary {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 8px 14px;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .summary-item { font-size: 13px; color: var(--text2); }
+  .summary-item strong { color: var(--text); }
+  .summary-item .money { color: var(--success); font-weight: 700; }
+
+  /* TITLE SUMMARY */
+  #title-summary { margin-top: 12px; }
+  .title-sum-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .title-sum-chip {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 4px 10px;
+    font-size: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .title-sum-chip .tsc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .title-sum-chip .tsc-name { color: var(--text2); }
+  .title-sum-chip .tsc-amt { color: var(--success); font-weight: 700; }
+
+  /* LIST */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--bg2); padding: 10px 12px; text-align: left;
+    font-size: 11px; font-weight: 700; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg3); }
+  td { padding: 9px 12px; font-size: 13px; vertical-align: middle; }
+  .td-title { font-weight: 600; }
+  .color-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; }
+  .td-ops { display: flex; gap: 6px; }
+  .btn-edit, .btn-del {
+    border: none; border-radius: var(--radius-sm);
+    padding: 5px 10px; font-size: 12px; cursor: pointer; font-family: var(--font); transition: all 0.15s;
+  }
+  .btn-edit { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-del { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .btn-del:hover { border-color: var(--danger); color: var(--danger); }
+  .status-badge {
+    display: inline-block; font-size: 11px; padding: 2px 8px;
+    border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); color: var(--text3);
+  }
+  .money-cell { color: var(--success); font-weight: 600; }
+  .empty-state { padding: 40px; text-align: center; color: var(--text3); }
+  .empty-state p { font-size: 15px; margin-bottom: 8px; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72); z-index: 200;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); width: 100%; max-width: 540px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--shadow); animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--bg2); z-index: 1;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .modal-header h3 { font-size: 16px; font-weight: 700; }
+  .modal-close {
+    background: none; border: none; color: var(--text3);
+    font-size: 22px; cursor: pointer; line-height: 1;
+    transition: color 0.15s; width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center; border-radius: 50%;
+  }
+  .modal-close:hover { color: var(--text); background: var(--bg3); }
+  .modal-body { padding: 18px; }
+  .modal-footer { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* FORM */
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 12px; color: var(--text3); margin-bottom: 5px; font-weight: 600; }
+  .form-row label .req { color: var(--accent2); margin-left: 2px; }
+  .form-row input, .form-row select, .form-row textarea {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); border-radius: var(--radius-sm);
+    padding: 8px 10px; font-size: 13px; font-family: var(--font);
+    transition: border-color 0.15s; -webkit-appearance: none;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { outline: none; border-color: var(--accent); }
+  .form-row textarea { min-height: 70px; resize: vertical; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .calc-display {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 8px 12px; font-size: 13px; color: var(--success); font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .calc-label { font-size: 11px; color: var(--text3); font-weight: 400; }
+
+  /* BTN */
+  .btn { padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font); cursor: pointer; border: none; transition: all 0.15s; font-weight: 600; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #6a58e8; }
+  .btn-secondary { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #e0405a; }
+
+  /* DETAIL MODAL */
+  .detail-grid { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; }
+  .detail-label { font-size: 12px; color: var(--text3); display: flex; align-items: center; }
+  .detail-value { font-size: 13px; word-break: break-all; display: flex; align-items: center; }
+  .detail-value a { color: var(--accent); }
+  .detail-money { color: var(--success); font-weight: 700; }
+
+  /* DAY MODAL */
+  .day-item {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s;
+  }
+  .day-item:hover { border-color: var(--accent); }
+  .day-item-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; }
+  .day-item-sub { font-size: 12px; color: var(--text2); }
+
+  /* CSV */
+  .csv-section { margin-bottom: 16px; }
+  .csv-section h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--text2); }
+  .file-drop {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 20px; text-align: center; cursor: pointer;
+    transition: border-color 0.15s; color: var(--text3); font-size: 13px;
+  }
+  .file-drop:hover, .file-drop.dragover { border-color: var(--accent); color: var(--accent); }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--bg2); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 22px; border-radius: 30px;
+    font-size: 13px; box-shadow: var(--shadow);
+    display: none; z-index: 9999; max-width: calc(100vw - 40px); text-align: center;
+  }
+
+  /* COLOR SETTINGS */
+  .color-settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+  .color-row { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; }
+  .color-row span { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .color-row input[type=color] { width: 30px; height: 28px; border: none; border-radius: 4px; cursor: pointer; background: none; padding: 0; }
+
+  /* MASTER MODAL */
+  .master-add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .master-add-row input {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); border-radius: var(--radius-sm);
+    padding: 8px 10px; font-size: 13px; font-family: var(--font); transition: border-color 0.15s;
+  }
+  .master-add-row input:focus { outline: none; border-color: var(--accent); }
+  .master-list { display: flex; flex-direction: column; gap: 6px; }
+  .master-item { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; }
+  .master-item-name { flex: 1; font-size: 13px; }
+  .in-use-badge { font-size: 10px; color: var(--text3); background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 2px 7px; white-space: nowrap; }
+  .btn-sm {
+    padding: 5px 11px; border-radius: var(--radius-sm); font-size: 12px;
+    font-family: var(--font); cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--text2);
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-sm:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+  .btn-sm:disabled { opacity: 0.38; cursor: not-allowed; }
+  .btn-sm-add {
+    padding: 8px 14px; border-radius: var(--radius-sm); font-size: 13px;
+    font-family: var(--font); cursor: pointer;
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    transition: all 0.15s; white-space: nowrap; font-weight: 600;
+  }
+  .btn-sm-add:hover { background: #6a58e8; border-color: #6a58e8; }
+
+  @media(max-width:640px) {
+    #header { gap: 5px; }
+    #header h1 { font-size: 14px; }
+    .hdr-btn { padding: 6px 8px; font-size: 11px; }
+    .cal-cell { min-height: 68px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid3 { grid-template-columns: 1fr; }
+    td { font-size: 12px; padding: 7px 8px; }
+    thead th { padding: 7px 8px; }
+    .detail-grid { grid-template-columns: 85px 1fr; }
+    .color-settings { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>&#x1F3B4; TCG発売カレンダー</h1>
+  <div class="hdr-btn-group">
+    <button class="hdr-btn active" id="btn-view-cal" onclick="switchView('calendar')">カレンダー</button>
+    <button class="hdr-btn" id="btn-view-list" onclick="switchView('list')">一覧</button>
+  </div>
+  <button class="hdr-btn" onclick="openCsvModal()">CSV</button>
+  <button class="hdr-btn" onclick="openColorModal()">色設定</button>
+  <button class="hdr-btn" onclick="openTitleMasterModal()">タイトル管理</button>
+  <button class="hdr-btn" onclick="openTypeMasterModal()">種別管理</button>
+  <button class="hdr-btn add" onclick="openAddModal()">&#xFF0B; 追加</button>
+</div>
+
+<div id="main">
+  <details id="filter-panel">
+    <summary>&#x1F50D; フィルター</summary>
+    <div class="filter-row">
+      <div class="filter-group">
+        <h4>タイトル</h4>
+        <div class="filter-checks" id="filter-titles"></div>
+      </div>
+      <div class="filter-group">
+        <h4>商品種別</h4>
+        <div class="filter-checks" id="filter-types"></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- CALENDAR VIEW -->
+  <div id="calendar-view">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="moveMonth(-1)">&#8249;</button>
+      <h2 id="cal-title"></h2>
+      <button class="cal-nav" onclick="moveMonth(1)">&#8250;</button>
+      <button class="hdr-btn" onclick="goToday()" title="今月へ戻る" style="border-radius:20px;padding:6px 14px;">今月</button>
+    </div>
+    <div id="month-summary"></div>
+    <div id="title-summary"></div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div id="list-view" style="display:none;">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>発売日</th><th>タイトル</th><th>商品名</th><th>種別</th>
+            <th>予約開始</th><th>予約締切</th><th>状態</th>
+            <th>単価</th><th>数量</th><th>予定支出</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="list-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL (背景クリックで閉じない) -->
+<div class="modal-overlay" id="form-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="form-modal-title">追加</h3>
+      <button class="modal-close" onclick="closeModal('form-modal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>タイトル名<span class="req">*</span></label>
+        <select id="f-titleName"></select>
+      </div>
+      <div class="form-row">
+        <label>商品名<span class="req">*</span></label>
+        <input type="text" id="f-productName" placeholder="例: 拡張パック ●●">
+      </div>
+      <div class="form-row">
+        <label>商品種別<span class="req">*</span></label>
+        <select id="f-productType"></select>
+      </div>
+      <div class="form-row">
+        <label>発売日<span class="req">*</span></label>
+        <input type="date" id="f-releaseDate">
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>予約開始日</label>
+          <input type="date" id="f-reserveStartDate">
+        </div>
+        <div class="form-row">
+          <label>予約締切日</label>
+          <input type="date" id="f-reserveEndDate">
+        </div>
+      </div>
+      <div class="form-grid3">
+        <div class="form-row">
+          <label>単価 (円)</label>
+          <input type="number" id="f-unitPrice" min="0" step="1" placeholder="0" oninput="updateCalcDisplay()">
+        </div>
+        <div class="form-row">
+          <label>購入予定数</label>
+          <input type="number" id="f-plannedQuantity" min="0" step="1" placeholder="0" oninput="updateCalcDisplay()">
+        </div>
+        <div class="form-row">
+          <label>予定支出</label>
+          <div class="calc-display" id="calc-display"><span class="calc-label">¥</span><span id="calc-result">0</span></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>ブランド</label>
+        <input type="text" id="f-brandName">
+      </div>
+      <div class="form-row">
+        <label>公式URL</label>
+        <input type="url" id="f-officialUrl" placeholder="https://...">
+      </div>
+      <div class="form-row">
+        <label>ステータス</label>
+        <select id="f-status">
+          <option value="">未設定</option>
+          <option value="未確認">未確認</option>
+          <option value="確認済">確認済</option>
+          <option value="予約済">予約済</option>
+          <option value="購入予定">購入予定</option>
+          <option value="購入済">購入済</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>メモ</label>
+        <textarea id="f-memo" placeholder="備考など..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('form-modal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveItem()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>詳細</h3>
+      <button class="modal-close" onclick="closeModal('detail-modal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid" id="detail-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('detail-modal')">閉じる</button>
+      <button class="btn btn-primary" id="detail-edit-btn">編集</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAY LIST MODAL -->
+<div class="modal-overlay" id="day-modal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3 id="day-modal-title"></h3>
+      <button class="modal-close" onclick="closeModal('day-modal')">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="day-modal-body"></div>
+  </div>
+</div>
+
+<!-- CSV MODAL -->
+<div class="modal-overlay" id="csv-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>CSV インポート / エクスポート</h3>
+      <button class="modal-close" onclick="closeModal('csv-modal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="csv-section">
+        <h4>&#x1F4E4; エクスポート</h4>
+        <button class="btn btn-primary" onclick="exportCsv()">CSVをダウンロード</button>
+      </div>
+      <div class="csv-section">
+        <h4>&#x1F4E5; インポート</h4>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:8px;">
+          必須ヘッダ: titleName, productName, productType, releaseDate<br>
+          未登録のタイトル・種別は自動でマスタに追加されます。
+        </p>
+        <div class="file-drop" id="file-drop" onclick="document.getElementById('csv-file-input').click()">
+          <div>クリックまたはドロップしてCSVを選択</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text3)">UTF-8 / ヘッダー必須</div>
+        </div>
+        <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('csv-modal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- COLOR MODAL -->
+<div class="modal-overlay" id="color-modal">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header">
+      <h3>&#x1F3A8; タイトル色設定</h3>
+      <button class="modal-close" onclick="closeModal('color-modal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text3);margin-bottom:12px;">タイトルマスタ全件が対象です。</p>
+      <div class="color-settings" id="color-settings-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('color-modal')">閉じる</button>
+      <button class="btn btn-primary" onclick="saveColors()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- TITLE MASTER MODAL -->
+<div class="modal-overlay" id="title-master-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>&#x1F4CB; タイトルマスタ管理</h3>
+      <button class="modal-close" onclick="closeModal('title-master-modal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="master-add-row">
+        <input type="text" id="new-title-input" placeholder="新規タイトル名を入力"
+          onkeydown="if(event.key==='Enter')addTitleMaster()">
+        <button class="btn-sm-add" onclick="addTitleMaster()">追加</button>
+      </div>
+      <div class="master-list" id="title-master-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('title-master-modal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- TYPE MASTER MODAL -->
+<div class="modal-overlay" id="type-master-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>&#x1F4CB; 商品種別マスタ管理</h3>
+      <button class="modal-close" onclick="closeModal('type-master-modal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="master-add-row">
+        <input type="text" id="new-type-input" placeholder="新規種別名を入力"
+          onkeydown="if(event.key==='Enter')addTypeMaster()">
+        <button class="btn-sm-add" onclick="addTypeMaster()">追加</button>
+      </div>
+      <div class="master-list" id="type-master-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('type-master-modal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="modal-overlay" id="del-modal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <h3>削除確認</h3>
+      <button class="modal-close" onclick="closeModal('del-modal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <p>このアイテムを削除しますか？この操作は元に戻せません。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('del-modal')">キャンセル</button>
+      <button class="btn btn-danger" id="del-confirm-btn">削除</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// CONSTANTS & STATE
+// ============================================================
+const STORAGE_KEY = 'tcg_release_calendar_v1';
+
+const DEFAULT_TITLE_MASTER = [
+  "ポケモンカードゲーム","ワンピースカードゲーム","遊戯王",
+  "デュエル・マスターズ","ヴァイスシュヴァルツ","ウルトラマンカードゲーム","ガンダムカードゲーム"
+];
+const DEFAULT_TYPE_MASTER = [
+  "ブースターパック","スタートデッキ","構築済みデッキ",
+  "スペシャルセット","プレミアムセット","サプライ","再販","その他"
+];
+
+// ESCで閉じる対象モーダル（form-modalは含めない）
+const ESC_CLOSEABLE = ['detail-modal','day-modal','csv-modal','color-modal','title-master-modal','type-master-modal','del-modal'];
+
+let state = {
+  items: [],
+  settings: {
+    titleColors: {},
+    filters: { titles: [], types: [] },
+    titleMaster: [...DEFAULT_TITLE_MASTER],
+    productTypeMaster: [...DEFAULT_TYPE_MASTER]
+  }
+};
+
+let currentYear  = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+let currentView  = 'calendar';
+let editingId    = null;
+
+// ============================================================
+// UTILS
+// ============================================================
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function normStr(s) {
+  if (s == null) return '';
+  return String(s).replace(/^\uFEFF/,'').trim();
+}
+
+function fmtDate(y, m, d) {
+  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+
+function fmtMoney(n) {
+  return '¥' + Number(n).toLocaleString('ja-JP');
+}
+
+function safeInt(v, def) {
+  const n = parseInt(v, 10);
+  return (isNaN(n) || n < 0) ? (def || 0) : n;
+}
+
+// ① 日付正規化: YYYY-MM-DD / YYYY-M-D / YYYY/MM/DD / YYYY/M/D → YYYY-MM-DD
+function normalizeDate(raw) {
+  if (!raw) return null;
+  const s = normStr(raw);
+  // YYYY-MM-DD or YYYY-M-D
+  let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  if (m) {
+    const y = parseInt(m[1],10), mo = parseInt(m[2],10), d = parseInt(m[3],10);
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return fmtDate(y, mo, d);
+  }
+  return null;
+}
+
+// ============================================================
+// STORAGE
+// ============================================================
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    state.items = Array.isArray(parsed.items) ? parsed.items : [];
+    const s = parsed.settings || {};
+    state.settings.titleColors = (s.titleColors && typeof s.titleColors === 'object') ? s.titleColors : {};
+    const f = s.filters || {};
+    state.settings.filters = {
+      titles: Array.isArray(f.titles) ? f.titles : [],
+      types:  Array.isArray(f.types)  ? f.types  : []
+    };
+    state.settings.titleMaster = (Array.isArray(s.titleMaster) && s.titleMaster.length > 0)
+      ? s.titleMaster : [...DEFAULT_TITLE_MASTER];
+    state.settings.productTypeMaster = (Array.isArray(s.productTypeMaster) && s.productTypeMaster.length > 0)
+      ? s.productTypeMaster : [...DEFAULT_TYPE_MASTER];
+
+    // ⑧-8 マイグレーション: unitPrice / plannedQuantity 補完
+    state.items.forEach(item => {
+      if (item.unitPrice      == null) item.unitPrice      = 0;
+      if (item.plannedQuantity == null) item.plannedQuantity = 0;
+      // ① 既存データの日付正規化
+      if (item.releaseDate) {
+        const nd = normalizeDate(item.releaseDate);
+        if (nd) item.releaseDate = nd;
+      }
+      // Migration: 未登録タイトル・種別をマスタへ
+      if (item.titleName   && !state.settings.titleMaster.includes(item.titleName))
+        state.settings.titleMaster.push(item.titleName);
+      if (item.productType && !state.settings.productTypeMaster.includes(item.productType))
+        state.settings.productTypeMaster.push(item.productType);
+    });
+  } catch(e) { console.error('loadData', e); }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ============================================================
+// FILTERS (master-based)
+// ============================================================
+function renderFilters() {
+  const selT = state.settings.filters.titles;
+  const selP = state.settings.filters.types;
+  document.getElementById('filter-titles').innerHTML =
+    state.settings.titleMaster.map(t =>
+      '<label><input type="checkbox" value="'+esc(t)+'" '+(selT.includes(t)?'checked':'')+' onchange="onFilterChange()"><span>'+esc(t)+'</span></label>'
+    ).join('');
+  document.getElementById('filter-types').innerHTML =
+    state.settings.productTypeMaster.map(t =>
+      '<label><input type="checkbox" value="'+esc(t)+'" '+(selP.includes(t)?'checked':'')+' onchange="onFilterChange()"><span>'+esc(t)+'</span></label>'
+    ).join('');
+}
+
+function onFilterChange() {
+  state.settings.filters.titles = [...document.querySelectorAll('#filter-titles input:checked')].map(e=>e.value);
+  state.settings.filters.types  = [...document.querySelectorAll('#filter-types input:checked')].map(e=>e.value);
+  saveData();
+  renderAll();
+}
+
+function getFilteredItems() {
+  const { titles, types } = state.settings.filters;
+  return state.items.filter(item => {
+    const tOk = titles.length === 0 || titles.includes(item.titleName);
+    const pOk = types.length  === 0 || types.includes(item.productType);
+    return tOk && pOk;
+  });
+}
+
+// ============================================================
+// ② STABLE SORT (正規化込み)
+// ============================================================
+function stableSort(arr) {
+  return arr.map((v,i) => [v,i]).sort(([a,ai],[b,bi]) => {
+    const ra = normStr(a.releaseDate);
+    const rb = normStr(b.releaseDate);
+    let d = ra.localeCompare(rb);
+    if (d !== 0) return d;
+    d = normStr(a.titleName).localeCompare(normStr(b.titleName));
+    if (d !== 0) return d;
+    d = normStr(a.productName).localeCompare(normStr(b.productName));
+    if (d !== 0) return d;
+    return ai - bi;
+  }).map(([v]) => v);
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function goToday() {
+  const now = new Date();
+  currentYear  = now.getFullYear();
+  currentMonth = now.getMonth();
+  renderCalendar();
+}
+
+function renderMonthSummary(monthItems) {
+  const cnt   = monthItems.length;
+  const total = monthItems.reduce((s,i) => s + (i.unitPrice||0)*(i.plannedQuantity||0), 0);
+  let html = '<span class="summary-item">&#x1F4E6; <strong>'+cnt+'</strong> 件</span>';
+  html += '<span class="summary-item">&#x1F4B0; 月合計: <span class="money">'+fmtMoney(total)+'</span></span>';
+  document.getElementById('month-summary').innerHTML = html;
+
+  // タイトル別集計
+  const byTitle = {};
+  monthItems.forEach(item => {
+    const t = item.titleName || '未設定';
+    if (!byTitle[t]) byTitle[t] = 0;
+    byTitle[t] += (item.unitPrice||0) * (item.plannedQuantity||0);
+  });
+  const chips = Object.entries(byTitle).filter(([,v]) => v > 0).map(([t,v]) => {
+    const color = state.settings.titleColors[t] || '#666677';
+    return '<div class="title-sum-chip">'+
+      '<span class="tsc-dot" style="background:'+color+'"></span>'+
+      '<span class="tsc-name">'+esc(t)+'</span>'+
+      '<span class="tsc-amt">'+fmtMoney(v)+'</span></div>';
+  }).join('');
+  const tsum = document.getElementById('title-summary');
+  tsum.innerHTML = chips ? '<div class="title-sum-grid">'+chips+'</div>' : '';
+}
+
+function renderCalendar() {
+  document.getElementById('cal-title').textContent = currentYear + '年 ' + (currentMonth+1) + '月';
+  const grid = document.getElementById('cal-grid');
+  const dows = ['日','月','火','水','木','金','土'];
+  let html = dows.map(d => '<div class="cal-dow">'+d+'</div>').join('');
+
+  const firstDay    = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const daysInPrev  = new Date(currentYear, currentMonth, 0).getDate();
+  const today       = new Date();
+  const todayStr    = fmtDate(today.getFullYear(), today.getMonth()+1, today.getDate());
+
+  // ① カレンダー側のdateStrと完全一致させるためにbyDateを構築
+  const byDate = {};
+  const monthItems = [];
+  const yrStr  = String(currentYear);
+  const monStr = String(currentMonth+1).padStart(2,'0');
+  const prefix = yrStr + '-' + monStr + '-';
+
+  getFilteredItems().forEach(item => {
+    const rd = normStr(item.releaseDate);
+    if (!rd) return;
+    if (!byDate[rd]) byDate[rd] = [];
+    byDate[rd].push(item);
+    if (rd.startsWith(prefix)) monthItems.push(item);
+  });
+
+  renderMonthSummary(monthItems);
+
+  const total = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+  for (let i = 0; i < total; i++) {
+    let day, mon, yr, isOther = false;
+    if (i < firstDay) {
+      day = daysInPrev - firstDay + i + 1;
+      mon = currentMonth === 0  ? 12 : currentMonth;
+      yr  = currentMonth === 0  ? currentYear - 1 : currentYear;
+      isOther = true;
+    } else if (i >= firstDay + daysInMonth) {
+      day = i - firstDay - daysInMonth + 1;
+      mon = currentMonth === 11 ? 1  : currentMonth + 2;
+      yr  = currentMonth === 11 ? currentYear + 1 : currentYear;
+      isOther = true;
+    } else {
+      day = i - firstDay + 1;
+      mon = currentMonth + 1;
+      yr  = currentYear;
+    }
+    const dateStr  = fmtDate(yr, mon, day);
+    const isToday  = dateStr === todayStr;
+    const dow      = i % 7;
+    const dayItems = byDate[dateStr] || [];
+
+    let cls = 'cal-cell';
+    if (isOther)   cls += ' other-month';
+    if (isToday)   cls += ' today';
+    if (dow === 0) cls += ' sun';
+    if (dow === 6) cls += ' sat';
+
+    const dateHtml = '<div class="cal-date">' +
+      (isToday ? '<span class="today-badge">'+day+'</span>' : '<span class="cal-date-num">'+day+'</span>') +
+      '</div>';
+
+    let itemsHtml = '';
+    dayItems.slice(0, 3).forEach(item => {
+      const color = state.settings.titleColors[item.titleName] || '#666677';
+      const abbr  = (item.titleName   || '').slice(0, 3);
+      const name  = (item.productName || '').slice(0, 10);
+      itemsHtml += '<div class="cal-item" style="background:'+color+'" title="'+esc(item.titleName+' '+item.productName)+
+        '" onclick="event.stopPropagation();openDetailModal(\''+item.id+'\')">'+esc(abbr)+' '+esc(name)+'</div>';
+    });
+    if (dayItems.length > 3) itemsHtml += '<div class="cal-more">+' + (dayItems.length-3) + '件</div>';
+
+    html += '<div class="'+cls+'" onclick="openDayModal(\''+dateStr+'\')">'+dateHtml+itemsHtml+'</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function moveMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
+  renderCalendar();
+}
+
+// ============================================================
+// LIST
+// ============================================================
+function renderList() {
+  const items = stableSort(getFilteredItems());
+  const tbody = document.getElementById('list-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><p>データがありません</p><p style="font-size:12px">「追加」ボタンから登録してください</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(item => {
+    const color  = state.settings.titleColors[item.titleName] || '#666677';
+    const price  = item.unitPrice       || 0;
+    const qty    = item.plannedQuantity || 0;
+    const total  = price * qty;
+    return '<tr>' +
+      '<td>'+esc(normStr(item.releaseDate))+'</td>' +
+      '<td class="td-title"><span class="color-dot" style="background:'+color+'"></span>'+esc(item.titleName||'')+'</td>' +
+      '<td>'+esc(item.productName||'')+'</td>' +
+      '<td>'+esc(item.productType||'')+'</td>' +
+      '<td>'+esc(item.reserveStartDate||'')+'</td>' +
+      '<td>'+esc(item.reserveEndDate||'')+'</td>' +
+      '<td><span class="status-badge">'+esc(item.status||'-')+'</span></td>' +
+      '<td class="money-cell">'+(price > 0 ? fmtMoney(price) : '-')+'</td>' +
+      '<td>'+(qty > 0 ? qty+'個' : '-')+'</td>' +
+      '<td class="money-cell">'+(total > 0 ? fmtMoney(total) : '-')+'</td>' +
+      '<td><div class="td-ops">' +
+        '<button class="btn-edit" onclick="openEditModal(\''+item.id+'\')">編集</button>' +
+        '<button class="btn-del"  onclick="confirmDelete(\''+item.id+'\')">削除</button>' +
+      '</div></td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ============================================================
+// VIEWS
+// ============================================================
+function switchView(v) {
+  currentView = v;
+  document.getElementById('calendar-view').style.display = v === 'calendar' ? '' : 'none';
+  document.getElementById('list-view').style.display     = v === 'list'     ? '' : 'none';
+  document.getElementById('btn-view-cal').classList.toggle('active',  v === 'calendar');
+  document.getElementById('btn-view-list').classList.toggle('active', v === 'list');
+  renderAll();
+}
+
+function renderAll() {
+  renderFilters();
+  if (currentView === 'calendar') renderCalendar();
+  else renderList();
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ④ 背景クリックで閉じる対象を form-modal 以外に限定
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  if (el.id === 'form-modal') return; // form-modalは背景クリックで閉じない
+  el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+});
+
+// ⑤ ESCキー対応
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  // 最前面で開いているESC対象モーダルを閉じる（後ろから検索）
+  for (let i = ESC_CLOSEABLE.length - 1; i >= 0; i--) {
+    const el = document.getElementById(ESC_CLOSEABLE[i]);
+    if (el && el.classList.contains('open')) {
+      closeModal(ESC_CLOSEABLE[i]);
+      return;
+    }
+  }
+});
+
+// ============================================================
+// FORM
+// ============================================================
+function updateCalcDisplay() {
+  const p = safeInt(document.getElementById('f-unitPrice').value, 0);
+  const q = safeInt(document.getElementById('f-plannedQuantity').value, 0);
+  document.getElementById('calc-result').textContent = (p * q).toLocaleString('ja-JP');
+}
+
+function populateFormSelects(curTitle, curType) {
+  document.getElementById('f-titleName').innerHTML =
+    '<option value="">-- 選択してください --</option>' +
+    state.settings.titleMaster.map(t =>
+      '<option value="'+esc(t)+'"'+(t===curTitle?' selected':'')+'>'+esc(t)+'</option>'
+    ).join('');
+  document.getElementById('f-productType').innerHTML =
+    '<option value="">-- 選択してください --</option>' +
+    state.settings.productTypeMaster.map(t =>
+      '<option value="'+esc(t)+'"'+(t===curType?' selected':'')+'>'+esc(t)+'</option>'
+    ).join('');
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('form-modal-title').textContent = '追加';
+  populateFormSelects('', '');
+  ['productName','releaseDate','reserveStartDate','reserveEndDate','brandName','officialUrl','memo'].forEach(k => {
+    document.getElementById('f-'+k).value = '';
+  });
+  document.getElementById('f-status').value = '';
+  document.getElementById('f-unitPrice').value = '';
+  document.getElementById('f-plannedQuantity').value = '';
+  document.getElementById('calc-result').textContent = '0';
+  openModal('form-modal');
+}
+
+function openEditModal(id) {
+  const item = state.items.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+  document.getElementById('form-modal-title').textContent = '編集';
+  populateFormSelects(item.titleName||'', item.productType||'');
+  ['productName','releaseDate','reserveStartDate','reserveEndDate','brandName','officialUrl','memo','status'].forEach(k => {
+    const el = document.getElementById('f-'+k);
+    if (el) el.value = item[k] || '';
+  });
+  document.getElementById('f-unitPrice').value       = item.unitPrice       || '';
+  document.getElementById('f-plannedQuantity').value = item.plannedQuantity || '';
+  updateCalcDisplay();
+  closeModal('detail-modal');
+  openModal('form-modal');
+}
+
+function saveItem() {
+  const title   = document.getElementById('f-titleName').value;
+  const product = document.getElementById('f-productName').value.trim();
+  const type    = document.getElementById('f-productType').value;
+  const date    = document.getElementById('f-releaseDate').value;
+  if (!title || !product || !type || !date) { showToast('必須項目を入力してください'); return; }
+
+  const now = new Date().toISOString();
+  const price = safeInt(document.getElementById('f-unitPrice').value, 0);
+  const qty   = safeInt(document.getElementById('f-plannedQuantity').value, 0);
+
+  const fields = {
+    titleName: title, productName: product, productType: type, releaseDate: date,
+    reserveStartDate: document.getElementById('f-reserveStartDate').value,
+    reserveEndDate:   document.getElementById('f-reserveEndDate').value,
+    brandName:   document.getElementById('f-brandName').value.trim(),
+    officialUrl: document.getElementById('f-officialUrl').value.trim(),
+    memo:   document.getElementById('f-memo').value.trim(),
+    status: document.getElementById('f-status').value,
+    unitPrice:       price,
+    plannedQuantity: qty,
+    updatedAt: now
+  };
+
+  if (editingId) {
+    const idx = state.items.findIndex(i => i.id === editingId);
+    if (idx === -1) return;
+    state.items[idx] = Object.assign({}, state.items[idx], fields);
+    showToast('更新しました');
+  } else {
+    state.items.push(Object.assign({
+      id: genId(), colorTag: '', sourceType: 'manual', sourceSite: '', sourceUrl: '', createdAt: now
+    }, fields));
+    showToast('追加しました');
+  }
+  saveData();
+  closeModal('form-modal');
+  renderAll();
+}
+
+// ============================================================
+// DETAIL MODAL
+// ============================================================
+function openDetailModal(id) {
+  const item = state.items.find(i => i.id === id);
+  if (!item) return;
+  const color  = state.settings.titleColors[item.titleName] || '#666677';
+  const price  = item.unitPrice       || 0;
+  const qty    = item.plannedQuantity || 0;
+  const total  = price * qty;
+  const rows = [
+    ['タイトル',   '<span class="color-dot" style="background:'+color+'"></span><strong>'+esc(item.titleName)+'</strong>'],
+    ['商品名',     esc(item.productName)],
+    ['種別',       esc(item.productType)],
+    ['発売日',     esc(normStr(item.releaseDate))],
+    ['予約開始',   esc(item.reserveStartDate||'-')],
+    ['予約締切',   esc(item.reserveEndDate||'-')],
+    ['ブランド',   esc(item.brandName||'-')],
+    ['URL',        item.officialUrl ? '<a href="'+esc(item.officialUrl)+'" target="_blank" rel="noopener">'+esc(item.officialUrl)+'</a>' : '-'],
+    ['ステータス', esc(item.status||'-')],
+    ['単価',       price > 0 ? '<span class="detail-money">'+fmtMoney(price)+'</span>' : '-'],
+    ['購入予定数', qty > 0   ? qty+'個' : '-'],
+    ['予定支出',   total > 0 ? '<span class="detail-money">'+fmtMoney(total)+'</span>' : '-'],
+    ['メモ',       esc(item.memo||'-')],
+    ['登録日',     esc((item.createdAt||'').slice(0,10))],
+    ['更新日',     esc((item.updatedAt||'').slice(0,10))]
+  ];
+  document.getElementById('detail-content').innerHTML =
+    rows.map(([l,v]) => '<div class="detail-label">'+l+'</div><div class="detail-value">'+v+'</div>').join('');
+  document.getElementById('detail-edit-btn').onclick = () => openEditModal(id);
+  openModal('detail-modal');
+}
+
+// ============================================================
+// DAY MODAL
+// ============================================================
+function openDayModal(dateStr) {
+  const items = getFilteredItems().filter(i => normStr(i.releaseDate) === dateStr);
+  if (!items.length) return;
+  const parts = dateStr.split('-');
+  document.getElementById('day-modal-title').textContent =
+    parts[0]+'年'+parseInt(parts[1])+'月'+parseInt(parts[2])+'日の発売';
+  document.getElementById('day-modal-body').innerHTML = items.map(item => {
+    const color = state.settings.titleColors[item.titleName] || '#666677';
+    const total = (item.unitPrice||0) * (item.plannedQuantity||0);
+    return '<div class="day-item" onclick="closeModal(\'day-modal\');openDetailModal(\''+item.id+'\')">'+
+      '<div class="day-item-title"><span class="color-dot" style="background:'+color+'"></span>'+esc(item.titleName)+' / '+esc(item.productName)+'</div>'+
+      '<div class="day-item-sub">'+esc(item.productType)+(item.status?' ・ '+esc(item.status):'')+(total>0?' ・ '+fmtMoney(total):'')+'</div>'+
+      '</div>';
+  }).join('');
+  openModal('day-modal');
+}
+
+// ============================================================
+// DELETE
+// ============================================================
+function confirmDelete(id) {
+  document.getElementById('del-confirm-btn').onclick = () => {
+    state.items = state.items.filter(i => i.id !== id);
+    saveData();
+    closeModal('del-modal');
+    closeModal('detail-modal');
+    renderAll();
+    showToast('削除しました');
+  };
+  openModal('del-modal');
+}
+
+// ============================================================
+// COLOR SETTINGS
+// ============================================================
+function openColorModal() {
+  const titles = state.settings.titleMaster;
+  const el = document.getElementById('color-settings-content');
+  if (!titles.length) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px;">タイトルマスタが空です。</p>';
+  } else {
+    el.innerHTML = titles.map(t => {
+      const c = state.settings.titleColors[t] || '#7c6aff';
+      return '<div class="color-row"><span title="'+esc(t)+'">'+esc(t)+'</span>'+
+        '<input type="color" value="'+c+'" data-title="'+esc(t)+'"></div>';
+    }).join('');
+  }
+  openModal('color-modal');
+}
+
+function saveColors() {
+  document.querySelectorAll('#color-settings-content input[type=color]').forEach(inp => {
+    state.settings.titleColors[inp.getAttribute('data-title')] = inp.value;
+  });
+  saveData();
+  closeModal('color-modal');
+  renderAll();
+  showToast('色設定を保存しました');
+}
+
+// ============================================================
+// TITLE MASTER
+// ============================================================
+function openTitleMasterModal() {
+  document.getElementById('new-title-input').value = '';
+  renderTitleMasterList();
+  openModal('title-master-modal');
+}
+
+function renderTitleMasterList() {
+  const usedSet = new Set(state.items.map(i => i.titleName));
+  const el = document.getElementById('title-master-list');
+  if (!state.settings.titleMaster.length) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px;">マスタが空です。</p>'; return;
+  }
+  el.innerHTML = state.settings.titleMaster.map((t,idx) => {
+    const used = usedSet.has(t);
+    return '<div class="master-item">'+
+      '<span class="master-item-name">'+esc(t)+'</span>'+
+      (used ? '<span class="in-use-badge">使用中</span>' : '')+
+      '<button class="btn-sm" '+(used?'disabled':'')+
+        ' onclick="deleteTitleMaster('+idx+')">削除</button>'+
+      '</div>';
+  }).join('');
+}
+
+function addTitleMaster() {
+  const val = document.getElementById('new-title-input').value.trim();
+  if (!val) { showToast('タイトル名を入力してください'); return; }
+  if (state.settings.titleMaster.includes(val)) { showToast('既に登録済みです'); return; }
+  state.settings.titleMaster.push(val);
+  saveData();
+  document.getElementById('new-title-input').value = '';
+  renderTitleMasterList();
+  showToast('追加しました');
+}
+
+function deleteTitleMaster(idx) {
+  const t = state.settings.titleMaster[idx];
+  if (!t) return;
+  if (state.items.some(i => i.titleName === t)) { showToast('使用中のため削除できません'); return; }
+  state.settings.titleMaster.splice(idx, 1);
+  // ⑦ フィルター整合性維持
+  state.settings.filters.titles = state.settings.filters.titles.filter(v => state.settings.titleMaster.includes(v));
+  saveData();
+  renderTitleMasterList();
+  showToast('削除しました');
+}
+
+// ============================================================
+// TYPE MASTER
+// ============================================================
+function openTypeMasterModal() {
+  document.getElementById('new-type-input').value = '';
+  renderTypeMasterList();
+  openModal('type-master-modal');
+}
+
+function renderTypeMasterList() {
+  const usedSet = new Set(state.items.map(i => i.productType));
+  const el = document.getElementById('type-master-list');
+  if (!state.settings.productTypeMaster.length) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px;">マスタが空です。</p>'; return;
+  }
+  el.innerHTML = state.settings.productTypeMaster.map((t,idx) => {
+    const used = usedSet.has(t);
+    return '<div class="master-item">'+
+      '<span class="master-item-name">'+esc(t)+'</span>'+
+      (used ? '<span class="in-use-badge">使用中</span>' : '')+
+      '<button class="btn-sm" '+(used?'disabled':'')+
+        ' onclick="deleteTypeMaster('+idx+')">削除</button>'+
+      '</div>';
+  }).join('');
+}
+
+function addTypeMaster() {
+  const val = document.getElementById('new-type-input').value.trim();
+  if (!val) { showToast('種別名を入力してください'); return; }
+  if (state.settings.productTypeMaster.includes(val)) { showToast('既に登録済みです'); return; }
+  state.settings.productTypeMaster.push(val);
+  saveData();
+  document.getElementById('new-type-input').value = '';
+  renderTypeMasterList();
+  showToast('追加しました');
+}
+
+function deleteTypeMaster(idx) {
+  const t = state.settings.productTypeMaster[idx];
+  if (!t) return;
+  if (state.items.some(i => i.productType === t)) { showToast('使用中のため削除できません'); return; }
+  state.settings.productTypeMaster.splice(idx, 1);
+  // ⑦ フィルター整合性維持
+  state.settings.filters.types = state.settings.filters.types.filter(v => state.settings.productTypeMaster.includes(v));
+  saveData();
+  renderTypeMasterList();
+  showToast('削除しました');
+}
+
+// ============================================================
+// CSV
+// ============================================================
+const CSV_HEADERS  = ['titleName','productName','productType','releaseDate',
+                      'reserveStartDate','reserveEndDate','brandName','officialUrl',
+                      'memo','status','colorTag','unitPrice','plannedQuantity'];
+const CSV_REQUIRED = ['titleName','productName','productType','releaseDate'];
+
+function openCsvModal() { openModal('csv-modal'); }
+
+function exportCsv() {
+  const rows = [CSV_HEADERS.join(',')];
+  state.items.forEach(item => {
+    rows.push(CSV_HEADERS.map(k => csvEsc(item[k] != null ? item[k] : '')).join(','));
+  });
+  const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tcg_calendar_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('エクスポートしました');
+}
+
+function csvEsc(v) {
+  v = String(v);
+  if (v.indexOf(',')>=0 || v.indexOf('"')>=0 || v.indexOf('\n')>=0 || v.indexOf('\r')>=0)
+    return '"' + v.replace(/"/g, '""') + '"';
+  return v;
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => importCsv(ev.target.result);
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+// Robust CSV parser (quoted newlines対応)
+function parseCsv(text) {
+  const rows = [];
+  let row = [], cur = '', inQ = false, i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i+1] === '"') { cur += '"'; i += 2; }
+        else { inQ = false; i++; }
+      } else { cur += c; i++; }
+    } else {
+      if (c === '"')  { inQ = true; i++; }
+      else if (c === ',') { row.push(cur); cur = ''; i++; }
+      else if (c === '\r') {
+        if (text[i+1] === '\n') i++;
+        row.push(cur); cur = ''; rows.push(row); row = []; i++;
+      } else if (c === '\n') {
+        row.push(cur); cur = ''; rows.push(row); row = []; i++;
+      } else { cur += c; i++; }
+    }
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function importCsv(text) {
+  text = text.replace(/^\uFEFF/, '');
+  const rows = parseCsv(text);
+  if (rows.length < 2) { showToast('データがありません'); return; }
+
+  const header = rows[0].map(h => normStr(h));
+
+  // ③ 必須ヘッダ検証 — 1つでも欠けたら中断、既存データ変更なし
+  for (const req of CSV_REQUIRED) {
+    if (!header.includes(req)) {
+      showToast('CSVエラー: 必須ヘッダが不足しています'); return;
+    }
+  }
+
+  const now = new Date().toISOString();
+  let added = 0, skipped = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const cols = rows[i];
+    if (cols.every(c => !normStr(c))) continue;
+    const obj = {};
+    header.forEach((h, j) => { obj[h] = normStr(cols[j]); });
+
+    // ① releaseDate 正規化
+    const rd = normalizeDate(obj.releaseDate);
+    if (!obj.titleName || !obj.productName || !obj.productType || !rd) {
+      skipped++; continue;
+    }
+
+    // Auto-register into masters
+    if (!state.settings.titleMaster.includes(obj.titleName))
+      state.settings.titleMaster.push(obj.titleName);
+    if (!state.settings.productTypeMaster.includes(obj.productType))
+      state.settings.productTypeMaster.push(obj.productType);
+
+    state.items.push({
+      id: genId(),
+      titleName:        obj.titleName,
+      productName:      obj.productName,
+      productType:      obj.productType,
+      releaseDate:      rd,  // ← 正規化済み
+      reserveStartDate: obj.reserveStartDate || '',
+      reserveEndDate:   obj.reserveEndDate   || '',
+      brandName:        obj.brandName        || '',
+      officialUrl:      obj.officialUrl      || '',
+      memo:             obj.memo             || '',
+      status:           obj.status           || '',
+      colorTag:         obj.colorTag         || '',
+      unitPrice:        safeInt(obj.unitPrice, 0),
+      plannedQuantity:  safeInt(obj.plannedQuantity, 0),
+      sourceType: 'imported', sourceSite: '', sourceUrl: '', // ⑥ imported
+      createdAt: now, updatedAt: now
+    });
+    added++;
+  }
+  saveData();
+  renderAll(); // ← 必ず実行
+  closeModal('csv-modal');
+  showToast('インポート完了: ' + added + '件追加, ' + skipped + '件スキップ');
+}
+
+// ============================================================
+// FILE DROP
+// ============================================================
+const dropZone = document.getElementById('file-drop');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => importCsv(ev.target.result);
+  reader.readAsText(file, 'UTF-8');
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = 'none'; }, 3400);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadData();
+renderAll();
+</script>
+</body>
+</html>
